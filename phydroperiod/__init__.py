@@ -1,8 +1,8 @@
 """
-Phydroperiod - Cálculo de hidroperiodo a partir de máscaras de agua.
+Phydroperiod - Hydroperiod calculation from water masks.
 
-Esta librería permite calcular el hidroperiodo (días de inundación)
-a partir de una serie temporal de máscaras de agua binarias.
+This library calculates hydroperiod (flood days) from
+a time series of water masks.
 """
 
 from .core import (

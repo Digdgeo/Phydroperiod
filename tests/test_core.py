@@ -1,4 +1,4 @@
-"""Tests para el módulo core de phydroperiod."""
+"""Tests for phydroperiod core module."""
 
 import numpy as np
 import pytest
@@ -7,10 +7,10 @@ from phydroperiod.core import calculate_scene_weights
 
 
 class TestCalculateSceneWeights:
-    """Tests para calculate_scene_weights."""
+    """Tests for calculate_scene_weights."""
 
     def test_single_scene(self):
-        """Una sola escena debe recibir 365 días."""
+        """Single scene should receive 365 days."""
         files = ["20200915_flood.tif"]
         weights = calculate_scene_weights(files)
 
@@ -18,21 +18,21 @@ class TestCalculateSceneWeights:
         assert weights["20200915"] == 365
 
     def test_two_scenes(self):
-        """Dos escenas deben dividir 365 días."""
+        """Two scenes should split 365 days."""
         files = ["20200915_flood.tif", "20210215_flood.tif"]
         weights = calculate_scene_weights(files)
 
         assert len(weights) == 2
-        # La suma debe ser aproximadamente 365
+        # Sum should be approximately 365
         assert abs(sum(weights.values()) - 365) < 1
 
     def test_empty_list(self):
-        """Lista vacía debe retornar diccionario vacío."""
+        """Empty list should return empty dictionary."""
         weights = calculate_scene_weights([])
         assert weights == {}
 
     def test_date_extraction_from_path(self):
-        """Debe extraer fechas correctamente de rutas completas."""
+        """Should extract dates correctly from full paths."""
         files = [
             "/path/to/data/20200915_flood.tif",
             "/another/path/20201015_mask.tif",
@@ -43,7 +43,7 @@ class TestCalculateSceneWeights:
         assert "20201015" in weights
 
     def test_weights_sum_to_365(self):
-        """Los pesos deben sumar aproximadamente 365."""
+        """Weights should sum to approximately 365."""
         files = [
             "20200915_flood.tif",
             "20201015_flood.tif",

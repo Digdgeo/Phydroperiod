@@ -1,8 +1,8 @@
 """
-Ejemplo básico de uso de la librería phydroperiod.
+Basic usage example for phydroperiod library.
 
-Este script muestra cómo calcular el hidroperiodo a partir de
-un directorio con máscaras de agua.
+This script shows how to calculate hydroperiod from
+a directory containing water masks.
 """
 
 from pathlib import Path
@@ -11,25 +11,25 @@ from phydroperiod import compute_hydroperiod
 
 
 def main():
-    # Ruta al directorio con máscaras de agua
-    # Las máscaras deben ser GeoTIFF binarios (0=seco, 1=agua)
-    # con nombres que empiecen por YYYYMMDD
+    # Path to directory with water masks
+    # Masks must be GeoTIFF (0=dry, 1=water, 2=nodata)
+    # with filenames starting with YYYYMMDD
     masks_dir = Path("/path/to/water_masks")
 
-    # Calcular hidroperiodo (pipeline completo)
-    print(f"Procesando máscaras en: {masks_dir}")
+    # Calculate hydroperiod (complete pipeline)
+    print(f"Processing masks in: {masks_dir}")
 
     results = compute_hydroperiod(
         input_path=masks_dir,
-        normalize=True,  # Normalizar a 365 días
+        normalize=True,  # Normalize to 365 days
     )
 
-    # Mostrar resultados
-    print("\nProductos generados:")
-    print(f"  - Intermedios: {results['intermediate_dir']}")
-    print(f"  - Hidroperiodo: {results['hydroperiod']}")
-    print(f"  - Días válidos: {results['valid_days']}")
-    print(f"  - Normalizado: {results['normalized']}")
+    # Show results
+    print("\nGenerated products:")
+    print(f"  - Intermediate: {results['intermediate_dir']}")
+    print(f"  - Hydroperiod: {results['hydroperiod']}")
+    print(f"  - Valid days: {results['valid_days']}")
+    print(f"  - Normalized: {results['normalized']}")
 
 
 if __name__ == "__main__":
