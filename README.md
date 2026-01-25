@@ -109,7 +109,10 @@ The calculation is based on the hydrological cycle running from September 1st to
 ## Example Output
 
 ![Valid days and hydroperiod](imgs/valid_days_and_hyd_non_normalized.png)
+*Accumulated valid days (left) and non-normalized hydroperiod (right) for the 2023-2024 hydrological cycle in Doñana, Spain.*
+
 ![Normalized hydroperiod](imgs/normalized_hydroperiod.png)
+*Normalized hydroperiod (0-365 days) for the same cycle.*
 
 ## Roadmap
 
