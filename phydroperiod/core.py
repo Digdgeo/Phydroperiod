@@ -89,7 +89,7 @@ def calculate_scene_weights(
         for i in range(len(cutpoints) - 1):
             values.append(cutpoints[i + 1] - cutpoints[i])
             ranges.append((cutpoints[i], cutpoints[i + 1]))
-        # Last scene: from last cutpoint to 365
+        # Last scene: from last cutpoint to 365 (exclusive, so includes up to day 364)
         values.append(365 - cutpoints[-1])
         ranges.append((cutpoints[-1], 365))
     else:
@@ -266,7 +266,8 @@ def _doy_to_date_int(doy: np.ndarray, base_year: int) -> np.ndarray:
     """Convert day of hydrological year (0-365) to YYYYMMDD integer format.
 
     Args:
-        doy: Array of days since September 1st (0-365)
+        doy: Array of days since September 1st (0-365, where 0=Sep 1).
+            Values >= 365 are capped to Aug 31 (last day of cycle).
         base_year: The starting year of the hydrological cycle
 
     Returns:
@@ -282,7 +283,9 @@ def _doy_to_date_int(doy: np.ndarray, base_year: int) -> np.ndarray:
     unique_days = np.unique(doy[valid_mask])
 
     for day_val in unique_days:
-        target_date = d0 + timedelta(days=int(day_val))
+        # Cap to 364 (Aug 31) so that DOY 365 doesn't overflow to next cycle
+        capped_day = min(int(day_val), 364)
+        target_date = d0 + timedelta(days=capped_day)
         date_int = target_date.year * 10000 + target_date.month * 100 + target_date.day
         result[doy == day_val] = date_int
 
