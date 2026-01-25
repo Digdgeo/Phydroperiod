@@ -1,68 +1,74 @@
 # Phydroperiod
 
-Librería Python para calcular el hidroperiodo (días de inundación) a partir de series temporales de máscaras de agua.
+Python library for calculating hydroperiod (flood days) from water mask time series.
 
-## Instalación
+## How it works
+
+The hydroperiod calculation distributes 365 days among available scenes based on their temporal position within the hydrological cycle (September 1st - August 31st):
+
+![Hydroperiod calculation scheme](imgs/hydroperiod_scheme.png)
+
+## Installation
 
 ```bash
 pip install phydroperiod
 ```
 
-O para desarrollo:
+For development:
 
 ```bash
 git clone https://github.com/Digdgeo/Phydroperiod.git
-cd phydroperiod
+cd Phydroperiod
 pip install -e ".[dev]"
 ```
 
-## Uso básico
+## Basic Usage
 
 ```python
 from phydroperiod import compute_hydroperiod
 
-# Calcular hidroperiodo desde un directorio con máscaras de agua
+# Calculate hydroperiod from a directory with water masks
 results = compute_hydroperiod("/path/to/water_masks")
 
-print(f"Hidroperiodo: {results['hydroperiod']}")
-print(f"Días válidos: {results['valid_days']}")
-print(f"Normalizado (0-365): {results['normalized']}")
+print(f"Hydroperiod: {results['hydroperiod']}")
+print(f"Valid days: {results['valid_days']}")
+print(f"Normalized (0-365): {results['normalized']}")
 ```
 
-## Requisitos de las máscaras
+## Mask Requirements
 
-- Formato: GeoTIFF (.tif)
-- Valores por defecto: 0 = seco, 1 = agua, 2 = nodata (nubes, sombras, etc.)
-- Nombres: deben empezar con fecha YYYYMMDD (ej: `20200915_flood.tif`)
+- Format: GeoTIFF (.tif)
+- Default values: 0 = dry, 1 = water, 2 = nodata (clouds, shadows, etc.)
+- Filenames: must start with date in YYYYMMDD format (e.g., `20200915_flood.tif`)
 
-Los valores son configurables:
+Values are configurable:
 
-## Funciones disponibles
+## Available Functions
 
 ### `compute_hydroperiod(input_path, output_path=None, normalize=True, ...)`
 
-Pipeline completo que ejecuta todos los pasos:
+Complete pipeline that executes all processing steps:
 
 ```python
 from phydroperiod import compute_hydroperiod
 
-# Uso básico (valores por defecto: 0=seco, 1=agua, 2=nodata)
+# Basic usage (default values: 0=dry, 1=water, 2=nodata)
 results = compute_hydroperiod(
     input_path="/path/to/masks",
-    output_path="/path/to/output",  # opcional
-    normalize=True,  # genera hidroperiodo normalizado a 365 días
+    output_path="/path/to/output",  # optional
+    normalize=True,  # generates hydroperiod normalized to 365 days
 )
 
-# Con valores personalizados
+# With custom values
 results = compute_hydroperiod(
     input_path="/path/to/masks",
-    water_value=1,      # valor que representa agua
-    dry_value=0,        # valor que representa seco
-    nodata_value=255,   # valor que representa nodata
+    water_value=1,      # value representing water
+    dry_value=0,        # value representing dry land
+    nodata_value=255,   # value representing nodata
 )
 ```
 
-### Funciones individuales
+### Individual Functions
 
 ```python
 from phydroperiod import (
@@ -72,41 +78,52 @@ from phydroperiod import (
     normalize_hydroperiod,
 )
 
-# 1. Calcular pesos por escena
+# 1. Calculate weights per scene
 weights = calculate_scene_weights(mask_files)
 
-# 2. Procesar máscaras (genera productos intermedios)
+# 2. Process masks (generates intermediate products)
 intermediate_dir = process_masks(input_path, weights=weights)
 
-# 3. Acumular hidroperiodo total
+# 3. Accumulate total hydroperiod
 hydroperiod_path, valid_days_path = accumulate_hydroperiod(intermediate_dir)
 
-# 4. Normalizar a 365 días
+# 4. Normalize to 365 days
 normalized_path = normalize_hydroperiod(output_path)
 ```
 
-## Ciclo hidrológico
+## Hydrological Cycle
 
-El cálculo se basa en el ciclo hidrológico que va del 1 de septiembre al 31 de agosto del año siguiente. Cada escena recibe un peso proporcional basado en su posición temporal dentro del ciclo.
+The calculation is based on the hydrological cycle running from September 1st to August 31st of the following year. Each scene receives a proportional weight based on its temporal position within the cycle.
 
-## Productos generados
+## Generated Products
 
-| Archivo | Descripción |
-|---------|-------------|
-| `*_flood_rec.tif` | Días de inundación por escena |
-| `*_dry_rec.tif` | Días secos por escena |
-| `*_valid_rec.tif` | Días válidos por escena |
-| `hydroperiod_YYYY_YYYY+1.tif` | Hidroperiodo acumulado |
-| `valid_days_YYYY_YYYY+1.tif` | Días válidos acumulados |
-| `hydroperiod_nor_YYYY_YYYY+1.tif` | Hidroperiodo normalizado (0-365) |
+| File | Description |
+|------|-------------|
+| `*_flood_rec.tif` | Flood days per scene |
+| `*_dry_rec.tif` | Dry days per scene |
+| `*_valid_rec.tif` | Valid days per scene |
+| `hydroperiod_YYYY_YYYY+1.tif` | Accumulated hydroperiod |
+| `valid_days_YYYY_YYYY+1.tif` | Accumulated valid days |
+| `hydroperiod_nor_YYYY_YYYY+1.tif` | Normalized hydroperiod (0-365) |
+
+## Example Output
+
+![Valid days and hydroperiod](imgs/valid_days_and_hyd_non_normalized.png)
+![Normalized hydroperiod](imgs/normalized_hydroperiod.png)
 
 ## Roadmap
 
-- [ ] Integración con Google Earth Engine para obtener máscaras de agua
-- [ ] Integración con Ndvi2Gif para generar máscaras automáticamente
-- [ ] CLI para uso desde terminal
-- [ ] Soporte para múltiples ciclos hidrológicos
+- [ ] Google Earth Engine integration for water mask retrieval
+- [ ] Ndvi2Gif integration for automatic mask generation
+- [ ] CLI for terminal usage
+- [ ] Support for multiple hydrological cycles
+- [ ] Leafmap integration for interactive visualization
 
-## Licencia
+## Authors
+
+- **Diego García Díaz** - Development and implementation
+- **Javier Bustamante Díaz** - Hydroperiod calculation methodology design
+
+## License
 
 MIT
