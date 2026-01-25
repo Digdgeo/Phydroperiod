@@ -33,6 +33,12 @@ results = compute_hydroperiod("/path/to/water_masks")
 print(f"Hydroperiod: {results['hydroperiod']}")
 print(f"Valid days: {results['valid_days']}")
 print(f"Normalized (0-365): {results['normalized']}")
+print(f"First flood (DOY): {results['first_flood_doy']}")
+print(f"First flood (date): {results['first_flood_date']}")
+print(f"Last flood (DOY): {results['last_flood_doy']}")
+print(f"Last flood (date): {results['last_flood_date']}")
+print(f"IRT raster: {results['irt_raster']}")
+print(f"IRT global: {results['irt_global']}")
 ```
 
 ## Mask Requirements
@@ -76,9 +82,12 @@ from phydroperiod import (
     process_masks,
     accumulate_hydroperiod,
     normalize_hydroperiod,
+    calculate_first_last_flood,
+    calculate_temporal_representativity,
+    calculate_pixel_irt,
 )
 
-# 1. Calculate weights per scene
+# 1. Calculate weights per scene (includes day ranges)
 weights = calculate_scene_weights(mask_files)
 
 # 2. Process masks (generates intermediate products)
@@ -87,8 +96,15 @@ intermediate_dir = process_masks(input_path, weights=weights)
 # 3. Accumulate total hydroperiod
 hydroperiod_path, valid_days_path = accumulate_hydroperiod(intermediate_dir)
 
-# 4. Normalize to 365 days
+# 4. Normalize to 365 days (saved as integer)
 normalized_path = normalize_hydroperiod(output_path)
+
+# 5. Calculate first/last flood day per pixel (DOY and YYYYMMDD formats)
+flood_dates = calculate_first_last_flood(input_path, weights=weights)
+
+# 6. Calculate Temporal Representativity Index (global and per-pixel)
+irt_global = calculate_temporal_representativity(mask_files)
+irt_raster = calculate_pixel_irt(input_path)
 ```
 
 ## Hydrological Cycle
@@ -99,12 +115,31 @@ The calculation is based on the hydrological cycle running from September 1st to
 
 | File | Description |
 |------|-------------|
-| `*_flood_rec.tif` | Flood days per scene |
-| `*_dry_rec.tif` | Dry days per scene |
-| `*_valid_rec.tif` | Valid days per scene |
-| `hydroperiod_YYYY_YYYY+1.tif` | Accumulated hydroperiod |
-| `valid_days_YYYY_YYYY+1.tif` | Accumulated valid days |
-| `hydroperiod_nor_YYYY_YYYY+1.tif` | Normalized hydroperiod (0-365) |
+| `*_flood_rec.tif` | Flood days per scene (intermediate) |
+| `*_dry_rec.tif` | Dry days per scene (intermediate) |
+| `*_valid_rec.tif` | Valid days per scene (intermediate) |
+| `hydroperiod_YYYY_YYYY+1.tif` | Accumulated hydroperiod (integer) |
+| `valid_days_YYYY_YYYY+1.tif` | Accumulated valid days (integer) |
+| `hydroperiod_nor_YYYY_YYYY+1.tif` | Normalized hydroperiod (0-365, integer) |
+| `first_flood_doy_YYYY_YYYY+1.tif` | First flood day (0-365, day of hydrological year) |
+| `last_flood_doy_YYYY_YYYY+1.tif` | Last flood day (0-365, day of hydrological year) |
+| `first_flood_date_YYYY_YYYY+1.tif` | First flood day (YYYYMMDD format, e.g., 20240915) |
+| `last_flood_date_YYYY_YYYY+1.tif` | Last flood day (YYYYMMDD format, e.g., 20250213) |
+| `irt_YYYY_YYYY+1.tif` | Temporal Representativity Index per pixel (0-1) |
+
+## Temporal Representativity Index (IRT)
+
+The library calculates an index (0-1) that measures how well distributed the observations are throughout the hydrological year:
+
+- **IRT = 1**: Observations perfectly distributed across the year
+- **IRT = 0**: All observations concentrated in a single period
+
+Two IRT values are provided:
+
+- **Global IRT** (`irt_global`): Based on the available scenes, same for all pixels
+- **Per-pixel IRT** (`irt_raster`): Accounts for nodata (clouds, shadows) affecting each pixel differently. A pixel covered by clouds in summer will have lower IRT than one with observations throughout the year.
+
+This helps assess the reliability of the hydroperiod calculation at both collection and pixel level.
 
 ## Example Output
 
@@ -124,8 +159,8 @@ The calculation is based on the hydrological cycle running from September 1st to
 
 ## Authors
 
-- **Diego García Díaz** - Development, implementation, and nodata handling methodology
-- **Javier Bustamante Díaz** - Hydroperiod calculation methodology design
+- **Javier Bustamante Díaz** - Main core methodology
+- **Diego García Díaz** - Development, implementation, and methodology
 
 ## License
 

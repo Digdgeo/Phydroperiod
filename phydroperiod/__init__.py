@@ -11,6 +11,9 @@ from .core import (
     accumulate_hydroperiod,
     normalize_hydroperiod,
     compute_hydroperiod,
+    calculate_first_last_flood,
+    calculate_temporal_representativity,
+    calculate_pixel_irt,
 )
 
 __version__ = "0.1.0"
@@ -22,4 +25,7 @@ __all__ = [
     "accumulate_hydroperiod",
     "normalize_hydroperiod",
     "compute_hydroperiod",
+    "calculate_first_last_flood",
+    "calculate_temporal_representativity",
+    "calculate_pixel_irt",
 ]
