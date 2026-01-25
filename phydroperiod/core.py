@@ -263,11 +263,11 @@ def accumulate_hydroperiod(
 
 
 def _doy_to_date_int(doy: np.ndarray, base_year: int) -> np.ndarray:
-    """Convert day of hydrological year (0-365) to YYYYMMDD integer format.
+    """Convert day of hydrological year (0-365/366) to YYYYMMDD integer format.
 
     Args:
-        doy: Array of days since September 1st (0-365, where 0=Sep 1).
-            Values >= 365 are capped to Aug 31 (last day of cycle).
+        doy: Array of days since September 1st (0-365/366, where 0=Sep 1).
+            Values beyond Aug 31 are capped to Aug 31 (last day of cycle).
         base_year: The starting year of the hydrological cycle
 
     Returns:
@@ -278,13 +278,17 @@ def _doy_to_date_int(doy: np.ndarray, base_year: int) -> np.ndarray:
     result = np.full_like(doy, -1, dtype=np.int32)
     d0 = date(base_year, 9, 1)
 
+    # Calculate last day of cycle (Aug 31 of next year) accounting for leap years
+    end_of_cycle = date(base_year + 1, 8, 31)
+    max_doy = (end_of_cycle - d0).days  # 364 for normal years, 365 for leap years
+
     # Get unique valid days to avoid computing the same date multiple times
     valid_mask = doy >= 0
     unique_days = np.unique(doy[valid_mask])
 
     for day_val in unique_days:
-        # Cap to 364 (Aug 31) so that DOY 365 doesn't overflow to next cycle
-        capped_day = min(int(day_val), 364)
+        # Cap to max_doy (Aug 31) so DOY doesn't overflow to next cycle
+        capped_day = min(int(day_val), max_doy)
         target_date = d0 + timedelta(days=capped_day)
         date_int = target_date.year * 10000 + target_date.month * 100 + target_date.day
         result[doy == day_val] = date_int
