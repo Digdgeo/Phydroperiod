@@ -159,8 +159,8 @@ This helps assess the reliability of the hydroperiod calculation at both collect
 
 ## Authors
 
-- **Javier Bustamante Díaz** - Main core methodology
 - **Diego García Díaz** - Development, implementation, and methodology
+- **Javier Bustamante Díaz** - Core methodology
 
 ## License
 
