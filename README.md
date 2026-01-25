@@ -11,7 +11,7 @@ pip install phydroperiod
 O para desarrollo:
 
 ```bash
-git clone https://github.com/Digdgeo/phydroperiod.git
+git clone https://github.com/Digdgeo/Phydroperiod.git
 cd phydroperiod
 pip install -e ".[dev]"
 ```
@@ -32,22 +32,33 @@ print(f"Normalizado (0-365): {results['normalized']}")
 ## Requisitos de las máscaras
 
 - Formato: GeoTIFF (.tif)
-- Valores: binarios (0 = seco, 1 = agua)
+- Valores por defecto: 0 = seco, 1 = agua, 2 = nodata (nubes, sombras, etc.)
 - Nombres: deben empezar con fecha YYYYMMDD (ej: `20200915_flood.tif`)
+
+Los valores son configurables:
 
 ## Funciones disponibles
 
-### `compute_hydroperiod(input_path, output_path=None, normalize=True)`
+### `compute_hydroperiod(input_path, output_path=None, normalize=True, ...)`
 
 Pipeline completo que ejecuta todos los pasos:
 
 ```python
 from phydroperiod import compute_hydroperiod
 
+# Uso básico (valores por defecto: 0=seco, 1=agua, 2=nodata)
 results = compute_hydroperiod(
     input_path="/path/to/masks",
     output_path="/path/to/output",  # opcional
     normalize=True,  # genera hidroperiodo normalizado a 365 días
+)
+
+# Con valores personalizados
+results = compute_hydroperiod(
+    input_path="/path/to/masks",
+    water_value=1,      # valor que representa agua
+    dry_value=0,        # valor que representa seco
+    nodata_value=255,   # valor que representa nodata
 )
 ```
 

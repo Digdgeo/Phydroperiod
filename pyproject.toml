@@ -49,9 +49,9 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Digdgeo/phydroperiod"
-Repository = "https://github.com/Digdgeo/phydroperiod"
-Issues = "https://github.com/Digdgeo/phydroperiod/issues"
+Homepage = "https://github.com/Digdgeo/Phydroperiod"
+Repository = "https://github.com/Digdgeo/Phydroperiod"
+Issues = "https://github.com/Digdgeo/Phydroperiod/issues"
 
 [project.scripts]
 phydroperiod = "phydroperiod.cli:main"

@@ -96,21 +96,29 @@ def process_masks(
     input_path: Union[str, Path],
     output_path: Optional[Union[str, Path]] = None,
     weights: Optional[Dict[str, float]] = None,
+    water_value: int = 1,
+    dry_value: int = 0,
+    nodata_value: int = 2,
 ) -> Path:
     """Procesa máscaras de agua generando productos intermedios por escena.
 
     Para cada máscara genera tres productos:
-    - *_flood_rec.tif: Días de inundación (píxeles con valor 1)
-    - *_dry_rec.tif: Días secos (píxeles con valor 0)
-    - *_valid_rec.tif: Días válidos (flood + dry)
+    - *_flood_rec.tif: Días de inundación (píxeles con water_value)
+    - *_dry_rec.tif: Días secos (píxeles con dry_value)
+    - *_valid_rec.tif: Días válidos (flood + dry, excluyendo nodata)
 
     Args:
         input_path: Directorio con máscaras de agua (.tif).
-            Las máscaras deben ser binarias: 1=agua, 0=seco.
         output_path: Directorio de salida. Si no se especifica,
             se crea un subdirectorio 'output' en input_path.
         weights: Diccionario de pesos por escena. Si no se especifica,
             se calcula automáticamente.
+        water_value: Valor que representa agua/inundación en las máscaras.
+            Por defecto 1.
+        dry_value: Valor que representa suelo seco en las máscaras.
+            Por defecto 0.
+        nodata_value: Valor que representa nodata (nubes, sombras, etc.).
+            Por defecto 2. Estos píxeles se excluyen del cálculo.
 
     Returns:
         Path al directorio de salida con los productos intermedios.
@@ -146,13 +154,13 @@ def process_masks(
             profile = src.profile.copy()
             profile.update(dtype=rasterio.float32)
 
-            # Inundadas: donde píxel = 1, asignar peso
-            flood_data = np.where(data == 1, weight, 0).astype(np.float32)
+            # Inundadas: donde píxel = water_value, asignar peso
+            flood_data = np.where(data == water_value, weight, 0).astype(np.float32)
 
-            # Secas: donde píxel = 0, asignar peso
-            dry_data = np.where(data == 0, weight, 0).astype(np.float32)
+            # Secas: donde píxel = dry_value, asignar peso
+            dry_data = np.where(data == dry_value, weight, 0).astype(np.float32)
 
-            # Válidas: suma de flood + dry
+            # Válidas: suma de flood + dry (nodata queda excluido automáticamente)
             valid_data = (flood_data + dry_data).astype(np.float32)
 
             # Guardar productos
@@ -299,6 +307,9 @@ def compute_hydroperiod(
     output_path: Optional[Union[str, Path]] = None,
     normalize: bool = True,
     target_days: int = 365,
+    water_value: int = 1,
+    dry_value: int = 0,
+    nodata_value: int = 2,
 ) -> Dict[str, Path]:
     """Pipeline completo para calcular el hidroperiodo.
 
@@ -309,12 +320,18 @@ def compute_hydroperiod(
     4. (Opcional) Normaliza a días objetivo
 
     Args:
-        input_path: Directorio con máscaras de agua binarias (.tif).
+        input_path: Directorio con máscaras de agua (.tif).
             Nombres con formato YYYYMMDD*.tif.
         output_path: Directorio base de salida. Si no se especifica,
             se crean subdirectorios en input_path.
         normalize: Si True, genera también el hidroperiodo normalizado.
         target_days: Días objetivo para normalización.
+        water_value: Valor que representa agua/inundación en las máscaras.
+            Por defecto 1.
+        dry_value: Valor que representa suelo seco en las máscaras.
+            Por defecto 0.
+        nodata_value: Valor que representa nodata (nubes, sombras, etc.).
+            Por defecto 2. Estos píxeles se excluyen del cálculo.
 
     Returns:
         Diccionario con rutas a los productos generados:
@@ -339,7 +356,13 @@ def compute_hydroperiod(
         final_path = output_path
 
     # Paso 1 y 2: Calcular pesos y procesar máscaras
-    intermediate_dir = process_masks(input_path, intermediate_path)
+    intermediate_dir = process_masks(
+        input_path,
+        intermediate_path,
+        water_value=water_value,
+        dry_value=dry_value,
+        nodata_value=nodata_value,
+    )
 
     # Paso 3: Acumular hidroperiodo
     hydroperiod_path, valid_days_path = accumulate_hydroperiod(
