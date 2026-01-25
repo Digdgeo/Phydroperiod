@@ -6,7 +6,7 @@ Python library for calculating hydroperiod (flood days) from water mask time ser
 
 The hydroperiod calculation distributes 365 days among available scenes based on their temporal position within the hydrological cycle (September 1st - August 31st):
 
-![Hydroperiod calculation scheme](imgs/hydroperiod_scheme.png)
+![Hydroperiod calculation scheme](https://raw.githubusercontent.com/Digdgeo/Phydroperiod/master/imgs/hydroperiod_scheme.png)
 
 ## Installation
 
@@ -143,10 +143,10 @@ This helps assess the reliability of the hydroperiod calculation at both collect
 
 ## Example Output
 
-![Valid days and hydroperiod](imgs/valid_days_and_hyd_non_normalized.png)
+![Valid days and hydroperiod](https://raw.githubusercontent.com/Digdgeo/Phydroperiod/master/imgs/valid_days_and_hyd_non_normalized.png)
 *Accumulated valid days (left) and non-normalized hydroperiod (right) for the 2023-2024 hydrological cycle in Doñana, Spain.*
 
-![Normalized hydroperiod](imgs/normalized_hydroperiod.png)
+![Normalized hydroperiod](https://raw.githubusercontent.com/Digdgeo/Phydroperiod/master/imgs/normalized_hydroperiod.png)
 *Normalized hydroperiod (0-365 days) for the same cycle.*
 
 ## Roadmap
