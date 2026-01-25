@@ -121,7 +121,7 @@ The calculation is based on the hydrological cycle running from September 1st to
 
 ## Authors
 
-- **Diego García Díaz** - Development and implementation
+- **Diego García Díaz** - Development, implementation, and nodata handling methodology
 - **Javier Bustamante Díaz** - Hydroperiod calculation methodology design
 
 ## License
