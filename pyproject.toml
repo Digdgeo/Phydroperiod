@@ -9,7 +9,8 @@ description = "Cálculo de hidroperiodo a partir de máscaras de agua"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "Diego García Díaz", email = "diego@example.com"}
+    {name = "Diego García Díaz", email = "diegogarcia@ebd.csic.es"},
+    {name = "Javier Bustamante Díaz"}
 ]
 keywords = ["hydroperiod", "remote-sensing", "wetlands", "hydrology", "GIS"]
 classifiers = [
