@@ -190,16 +190,16 @@ The midpoint weighting scheme is due to J. Bustamante (EBD-CSIC). A formal descr
 in preparation; until it is published, please cite this repository and name the method's
 author.
 
-The Doñana monitoring programme in which the method was developed is described in:
+The Doñana monitoring programme in which the scheme was developed is described in:
 
 > Díaz-Delgado, R., Aragonés, D., Afán, I., & Bustamante, J. (2016). Long-Term Monitoring
 > of the Flooding Regime and Hydroperiod of Doñana Marshes with Landsat Time Series
 > (1974-2014). *Remote Sensing*, 8, 775. https://doi.org/10.3390/rs8090775
 
-Note that the hydroperiod algorithm published in that paper is the earlier, scene-level
-version of the protocol: it sums the intervals between consecutive scenes in which a
-pixel is flooded and does **not** use midpoint weighting. Please do not cite it as the
-source of this method.
+That paper is the background to this work rather than the source of its method: the
+hydroperiod it reports comes from an earlier, scene-level algorithm developed around the
+Doñana series itself. The midpoint scheme implemented here takes a series of water masks
+and a cycle start, and needs nothing particular to a site.
 
 ## License
 
