@@ -1,0 +1,36 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata from this file."
+title: "Phydroperiod: hydroperiod from water mask time series"
+abstract: >-
+  Python library that computes hydroperiod — the number of days a pixel holds
+  water over a hydrological cycle — from a time series of water masks. It
+  implements the midpoint weighting scheme of J. Bustamante, in which each scene
+  is weighted by the stretch of the cycle it stands for rather than counted as a
+  single observation, and adds per-pixel tracking of valid observations, so that
+  a partly cloudy scene contributes wherever it is clear. From that it derives
+  the first and last flood day, a temporal representativity index per pixel and
+  for the collection, and the hydroperiod normalised to a 365-day cycle. It
+  needs only the masks and a cycle start, with nothing particular to a site.
+type: software
+authors:
+  - family-names: "García Díaz"
+    given-names: "Diego"
+    email: "diegogarcia@ebd.csic.es"
+    affiliation: "Estación Biológica de Doñana (EBD-CSIC)"
+    orcid: "https://orcid.org/0000-0002-2757-7112"
+  - family-names: "Bustamante Díaz"
+    given-names: "Javier"
+    affiliation: "Estación Biológica de Doñana (EBD-CSIC)"
+    orcid: "https://orcid.org/0000-0001-7515-0677"
+version: 0.1.4
+date-released: "2026-10-14"
+license: MIT
+repository-code: "https://github.com/Digdgeo/Phydroperiod"
+keywords:
+  - hydroperiod
+  - wetlands
+  - water mask
+  - remote sensing
+  - Landsat
+  - Sentinel-2
+  - Doñana
