@@ -8,6 +8,22 @@ The hydroperiod calculation distributes 365 days among available scenes based on
 
 ![Hydroperiod calculation scheme](https://raw.githubusercontent.com/Digdgeo/Phydroperiod/master/imgs/hydroperiod_scheme.png)
 
+Scenes are irregularly spaced in time, so each one is weighted by the stretch of the
+cycle it represents rather than counted as a single observation: the boundaries between
+consecutive scenes are placed at the midpoints of their acquisition dates, and the first
+and last scenes extend to the start and the end of the cycle, so the weights add up to
+365. A pixel observed as water in a single scene therefore contributes the days that
+scene stands for, not one day.
+
+**This midpoint weighting scheme is the method of Javier Bustamante** (Estación Biológica
+de Doñana, CSIC), developed for the long-term monitoring of the Doñana marshes. It has
+not been described formally in the literature; a full account is in preparation. Please
+credit it as his when you use this library.
+
+On top of that scheme, this library tracks valid observations **per pixel**, so that a
+partially cloudy scene contributes wherever it is clear, and derives from that the
+per-pixel first and last flood day and the per-pixel temporal representativity index.
+
 ## Installation
 
 ```bash
@@ -159,8 +175,31 @@ This helps assess the reliability of the hydroperiod calculation at both collect
 
 ## Authors
 
-- **Diego García Díaz** - Development, implementation, and methodology
-- **Javier Bustamante Díaz** - Core methodology
+- **Javier Bustamante Díaz** - Midpoint weighting scheme (core method)
+- **Diego García Díaz** - Per-pixel treatment of missing data, per-pixel IRT and
+  first/last flood day, development and implementation
+
+## Citation
+
+If you use this library, please cite the software and credit the method:
+
+> García Díaz, D., & Bustamante Díaz, J. *Phydroperiod: hydroperiod from water mask time
+> series*. https://github.com/Digdgeo/Phydroperiod
+
+The midpoint weighting scheme is due to J. Bustamante (EBD-CSIC). A formal description is
+in preparation; until it is published, please cite this repository and name the method's
+author.
+
+The Doñana monitoring programme in which the method was developed is described in:
+
+> Díaz-Delgado, R., Aragonés, D., Afán, I., & Bustamante, J. (2016). Long-Term Monitoring
+> of the Flooding Regime and Hydroperiod of Doñana Marshes with Landsat Time Series
+> (1974-2014). *Remote Sensing*, 8, 775. https://doi.org/10.3390/rs8090775
+
+Note that the hydroperiod algorithm published in that paper is the earlier, scene-level
+version of the protocol: it sums the intervals between consecutive scenes in which a
+pixel is flooded and does **not** use midpoint weighting. Please do not cite it as the
+source of this method.
 
 ## License
 
