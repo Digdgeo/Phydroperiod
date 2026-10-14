@@ -6,6 +6,7 @@ during a hydrological cycle (September 1st - August 31st).
 """
 
 import os
+import warnings
 from datetime import date
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
@@ -15,9 +16,59 @@ import rasterio
 from rasterio.profiles import Profile
 
 
+def _cycle_year(d: date, hydrological_year_start: Tuple[int, int]) -> int:
+    """Base year of the hydrological cycle a date belongs to.
+
+    A cycle labelled ``Y`` runs from ``Y-start`` to the day before
+    ``(Y+1)-start``, so a date before the start day belongs to the *previous*
+    cycle: with a 1 September start, 2021-01-12 is part of cycle 2020.
+    """
+    start_month, start_day = hydrological_year_start
+    return d.year if (d.month, d.day) >= (start_month, start_day) else d.year - 1
+
+
+def _base_year(
+    scene_dates: List[str],
+    hydrological_year_start: Tuple[int, int],
+    hyd_year: Optional[int] = None,
+) -> int:
+    """The cycle these scenes belong to, or ``hyd_year`` when it is given.
+
+    Taking the smallest calendar year in the filenames, which is what this did
+    before, breaks on any cycle whose first usable scene falls after New Year:
+    a 2020/21 cycle first seen on 2021-01-12 was read as cycle 2021, putting
+    ``d0`` a year ahead of every scene. The weights then came out negative for
+    the first scene and above 365 for the last, **and still summed to exactly
+    365**, so nothing downstream could notice.
+
+    Dates are therefore mapped to their cycle before the minimum is taken. A
+    collection that spans more than one cycle has no single answer, so it warns
+    and uses the earliest: weights are only meaningful within one cycle.
+    """
+    if hyd_year is not None:
+        return int(hyd_year)
+
+    cycles = sorted({
+        _cycle_year(
+            date(int(d[:4]), int(d[4:6]), int(d[6:8])), hydrological_year_start
+        )
+        for d in scene_dates
+    })
+    if len(cycles) > 1:
+        warnings.warn(
+            f"scenes span {len(cycles)} hydrological cycles ({cycles[0]}"
+            f"-{cycles[-1]}); weights are only meaningful within one cycle. "
+            f"Using {cycles[0]}. Pass hyd_year= to be explicit, or split the "
+            f"scenes by cycle.",
+            stacklevel=3,
+        )
+    return cycles[0]
+
+
 def calculate_scene_weights(
     mask_files: List[str],
     hydrological_year_start: Tuple[int, int] = (9, 1),
+    hyd_year: Optional[int] = None,
 ) -> Dict[str, Dict[str, float]]:
     """Calculate the weight in days for each scene within a hydrological cycle.
 
@@ -29,6 +80,10 @@ def calculate_scene_weights(
             start with YYYYMMDD format (e.g., 20200315_flood.tif).
         hydrological_year_start: Tuple (month, day) of the hydrological
             cycle start. Default (9, 1) = September 1st.
+        hyd_year: Base year of the cycle, i.e. 2020 for 2020/21. Inferred from
+            the scene dates when omitted; pass it when the inference has
+            nothing to work with, such as a cycle whose only scenes fall after
+            New Year.
 
     Returns:
         Dictionary {scene_date: {'weight': days, 'start': start_day, 'end': end_day}}.
@@ -52,8 +107,7 @@ def calculate_scene_weights(
         return {}
 
     # Determine base year of hydrological cycle
-    years = [int(d[:4]) for d in scene_dates]
-    base_year = min(years)
+    base_year = _base_year(scene_dates, hydrological_year_start, hyd_year)
     start_month, start_day = hydrological_year_start
     d0 = date(base_year, start_month, start_day)
 
@@ -196,6 +250,8 @@ def process_masks(
 def accumulate_hydroperiod(
     input_path: Union[str, Path],
     output_path: Optional[Union[str, Path]] = None,
+    hydrological_year_start: Tuple[int, int] = (9, 1),
+    hyd_year: Optional[int] = None,
 ) -> Tuple[Path, Path]:
     """Accumulate intermediate products to generate total hydroperiod.
 
@@ -225,10 +281,12 @@ def accumulate_hydroperiod(
     if not flood_files:
         raise ValueError(f"No *_flood_rec.tif files found in {input_path}")
 
-    # Determine hydrological cycle
-    first_file = flood_files[0].name
-    year1 = first_file[:4]
-    year2 = str(int(year1) + 1)
+    # Determine hydrological cycle. Not the year of the first filename: a cycle
+    # whose first scene falls after New Year would be labelled a year late.
+    year1 = _base_year(
+        [f.name[:8] for f in flood_files], hydrological_year_start, hyd_year
+    )
+    year2 = year1 + 1
     cycle_suffix = f"_{year1}_{year2}"
 
     # Read first file to get shape and metadata
@@ -262,24 +320,34 @@ def accumulate_hydroperiod(
     return hydroperiod_path, valid_days_path
 
 
-def _doy_to_date_int(doy: np.ndarray, base_year: int) -> np.ndarray:
+def _doy_to_date_int(
+    doy: np.ndarray,
+    base_year: int,
+    hydrological_year_start: Tuple[int, int] = (9, 1),
+) -> np.ndarray:
     """Convert day of hydrological year (0-365/366) to YYYYMMDD integer format.
 
     Args:
         doy: Array of days since September 1st (0-365/366, where 0=Sep 1).
             Values beyond Aug 31 are capped to Aug 31 (last day of cycle).
         base_year: The starting year of the hydrological cycle
+        hydrological_year_start: Tuple (month, day) the cycle starts on. It has
+            to be the same one the weights were built with: this used to assume
+            1 September regardless, so any other start silently converted the
+            days against the wrong origin.
 
     Returns:
         Array with dates as integers (e.g., 20240915, 20250213)
     """
     from datetime import timedelta
 
+    start_month, start_day = hydrological_year_start
     result = np.full_like(doy, -1, dtype=np.int32)
-    d0 = date(base_year, 9, 1)
+    d0 = date(base_year, start_month, start_day)
 
-    # Calculate last day of cycle (Aug 31 of next year) accounting for leap years
-    end_of_cycle = date(base_year + 1, 8, 31)
+    # Last day of the cycle: the day before the next one begins, which also
+    # takes care of leap years
+    end_of_cycle = date(base_year + 1, start_month, start_day) - timedelta(days=1)
     max_doy = (end_of_cycle - d0).days  # 364 for normal years, 365 for leap years
 
     # Get unique valid days to avoid computing the same date multiple times
@@ -301,6 +369,8 @@ def calculate_first_last_flood(
     output_path: Optional[Union[str, Path]] = None,
     weights: Optional[Dict[str, Dict[str, float]]] = None,
     water_value: int = 1,
+    hydrological_year_start: Tuple[int, int] = (9, 1),
+    hyd_year: Optional[int] = None,
 ) -> Dict[str, Path]:
     """Calculate first and last flood day for each pixel.
 
@@ -343,11 +413,15 @@ def calculate_first_last_flood(
 
     # Calculate weights if not provided
     if weights is None:
-        weights = calculate_scene_weights([str(f) for f in mask_files])
+        weights = calculate_scene_weights(
+            [str(f) for f in mask_files], hydrological_year_start, hyd_year
+        )
 
-    # Determine hydrological cycle
-    first_file = mask_files[0].name
-    year1 = int(first_file[:4])
+    # Determine hydrological cycle. Not the year of the first filename: a cycle
+    # whose first scene falls after New Year would be labelled a year late.
+    year1 = _base_year(
+        [f.name[:8] for f in mask_files], hydrological_year_start, hyd_year
+    )
     year2 = year1 + 1
     cycle_suffix = f"_{year1}_{year2}"
 
@@ -386,8 +460,8 @@ def calculate_first_last_flood(
             last_flood = np.where(is_flooded, end_day, last_flood).astype(np.int16)
 
     # Convert DOY to date format
-    first_flood_date = _doy_to_date_int(first_flood, year1)
-    last_flood_date = _doy_to_date_int(last_flood, year1)
+    first_flood_date = _doy_to_date_int(first_flood, year1, hydrological_year_start)
+    last_flood_date = _doy_to_date_int(last_flood, year1, hydrological_year_start)
 
     # Save DOY results (int16)
     profile_int16 = profile.copy()
@@ -425,6 +499,7 @@ def calculate_temporal_representativity(
     mask_files: List[str],
     hydrological_year_start: Tuple[int, int] = (9, 1),
     n_periods: int = 12,
+    hyd_year: Optional[int] = None,
 ) -> float:
     """Calculate Temporal Representativity Index (IRT).
 
@@ -456,8 +531,7 @@ def calculate_temporal_representativity(
         return 0.0
 
     # Determine base year
-    years = [int(d[:4]) for d in scene_dates]
-    base_year = min(years)
+    base_year = _base_year(scene_dates, hydrological_year_start, hyd_year)
     start_month, start_day = hydrological_year_start
     d0 = date(base_year, start_month, start_day)
 
@@ -504,6 +578,7 @@ def calculate_pixel_irt(
     nodata_value: int = 2,
     n_periods: int = 12,
     hydrological_year_start: Tuple[int, int] = (9, 1),
+    hyd_year: Optional[int] = None,
 ) -> Path:
     """Calculate Temporal Representativity Index (IRT) per pixel.
 
@@ -543,9 +618,12 @@ def calculate_pixel_irt(
     if not mask_files:
         raise ValueError(f"No .tif files found in {input_path}")
 
-    # Determine hydrological cycle and base year
-    first_file = mask_files[0].name
-    year1 = int(first_file[:4])
+    # Determine hydrological cycle and base year. Not the year of the first
+    # filename: a cycle whose first scene falls after New Year was labelled a
+    # year late, and d0 landed a year ahead of every scene.
+    year1 = _base_year(
+        [f.name[:8] for f in mask_files], hydrological_year_start, hyd_year
+    )
     year2 = year1 + 1
     cycle_suffix = f"_{year1}_{year2}"
 
@@ -697,6 +775,8 @@ def compute_hydroperiod(
     nodata_value: int = 2,
     compute_first_last: bool = True,
     compute_irt: bool = True,
+    hydrological_year_start: Tuple[int, int] = (9, 1),
+    hyd_year: Optional[int] = None,
 ) -> Dict[str, Union[Path, float]]:
     """Complete pipeline to calculate hydroperiod.
 
@@ -723,6 +803,11 @@ def compute_hydroperiod(
             Default 2. These pixels are excluded from calculation.
         compute_first_last: If True, generates first/last flood day rasters.
         compute_irt: If True, calculates the Temporal Representativity Index.
+        hydrological_year_start: Tuple (month, day) the cycle starts on.
+            Default (9, 1) = September 1st.
+        hyd_year: Base year of the cycle, i.e. 2020 for 2020/21. Inferred from
+            the scene dates when omitted, and passed on to every step so that
+            they cannot disagree about which cycle this is.
 
     Returns:
         Dictionary with paths to generated products:
@@ -757,8 +842,17 @@ def compute_hydroperiod(
         if f.name[:8].isdigit()
     ])
 
-    # Step 1: Calculate weights with ranges
-    weights = calculate_scene_weights(mask_files)
+    # Step 1: Calculate weights with ranges. The cycle is resolved once, here,
+    # and handed to every step: each one used to work it out from the filenames
+    # on its own, so a disagreement between them was possible.
+    if hyd_year is None and mask_files:
+        hyd_year = _base_year(
+            [Path(f).name[:8] for f in mask_files], hydrological_year_start
+        )
+
+    weights = calculate_scene_weights(
+        mask_files, hydrological_year_start, hyd_year
+    )
 
     # Step 2: Process masks
     intermediate_dir = process_masks(
@@ -772,7 +866,7 @@ def compute_hydroperiod(
 
     # Step 3: Accumulate hydroperiod
     hydroperiod_path, valid_days_path = accumulate_hydroperiod(
-        intermediate_dir, final_path
+        intermediate_dir, final_path, hydrological_year_start, hyd_year
     )
 
     results = {
@@ -789,7 +883,8 @@ def compute_hydroperiod(
     # Step 5: First/Last flood day (optional)
     if compute_first_last:
         flood_dates = calculate_first_last_flood(
-            input_path, final_path, weights=weights, water_value=water_value
+            input_path, final_path, weights=weights, water_value=water_value,
+            hydrological_year_start=hydrological_year_start, hyd_year=hyd_year,
         )
         results["first_flood_doy"] = flood_dates['first_flood_doy']
         results["last_flood_doy"] = flood_dates['last_flood_doy']
@@ -799,12 +894,15 @@ def compute_hydroperiod(
     # Step 6: Calculate IRT (optional)
     if compute_irt:
         # Global IRT (for the scene collection)
-        irt_global = calculate_temporal_representativity(mask_files)
+        irt_global = calculate_temporal_representativity(
+            mask_files, hydrological_year_start, hyd_year=hyd_year
+        )
         results["irt_global"] = irt_global
 
         # Per-pixel IRT raster
         irt_path = calculate_pixel_irt(
-            input_path, final_path, nodata_value=nodata_value
+            input_path, final_path, nodata_value=nodata_value,
+            hydrological_year_start=hydrological_year_start, hyd_year=hyd_year,
         )
         results["irt_raster"] = irt_path
 

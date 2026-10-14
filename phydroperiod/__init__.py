@@ -16,7 +16,7 @@ from .core import (
     calculate_pixel_irt,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.1.4"
 __author__ = "Diego García Díaz"
 
 __all__ = [

@@ -4,12 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "phydroperiod"
-version = "0.1.3"
+version = "0.1.4"
 description = "Cálculo de hidroperiodo a partir de máscaras de agua"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "Diego García Díaz, Javier Bustamante Díaz", email = "diegogarcia@ebd.csic.es"}
+    {name = "Diego García Díaz", email = "diegogarcia@ebd.csic.es"},
+    {name = "Javier Bustamante Díaz"}
 ]
 keywords = ["hydroperiod", "remote-sensing", "wetlands", "hydrology", "GIS"]
 classifiers = [
