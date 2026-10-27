@@ -23,7 +23,7 @@ authors:
     affiliation: "Estación Biológica de Doñana (EBD-CSIC)"
     orcid: "https://orcid.org/0000-0001-7515-0677"
 version: 0.1.4
-date-released: "2026-10-14"
+date-released: "2026-10-27"
 license: MIT
 repository-code: "https://github.com/Digdgeo/Phydroperiod"
 keywords:
